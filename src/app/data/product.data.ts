@@ -37,11 +37,5 @@ export const products: Product[] = [
         name: 'Monitor 24"',
         price: 70,
         description: 'Monitor 24"'
-    },
-    {
-        id: 7,
-        name: 'Mousepad',
-        price: 10,
-        description: 'Mousepad'
     }
 ]
