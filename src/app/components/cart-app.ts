@@ -4,11 +4,12 @@ import { Product } from '../models/product';
 import { Catalog } from './catalog/catalog';
 import { CartItem } from '../models/cartitem';
 import { Navbar } from './navbar/navbar';
-import { CartModal } from './cart-modal/cart-modal';
+import { RouterOutlet } from '@angular/router';
+import { SharingData } from '../services/sharing-data';
 
 @Component({
   selector: 'cart-app',
-  imports: [Catalog, CartModal, Navbar],
+  imports: [Catalog, Navbar, RouterOutlet],
   templateUrl: './cart-app.html',
 })
 export class CartApp implements OnInit {
@@ -17,19 +18,17 @@ export class CartApp implements OnInit {
 
   items: CartItem[] = [];
 
-  // total: number = 0;
+  total: number = 0;
 
-  showCart: boolean = false;
-
-  constructor(private service: ProductService) {
+  constructor(private sharingData: SharingData, private service: ProductService) {
 
   }
 
   ngOnInit(): void {
     this.products = this.service.findAll();
     this.items = JSON.parse(sessionStorage.getItem('cart') || '[]');
-    // this.calculateTotal();
-    
+    this.calculateTotal();
+    this.onDeleteCart();
   }
 
   onAddCart(product: Product): void {
@@ -48,31 +47,30 @@ export class CartApp implements OnInit {
     } else {
       this.items = [... this.items, { product: { ...product }, quantity: 1 }]
     }
-    // this.calculateTotal();
-    // this.saveSession();
+    this.calculateTotal();
+    this.saveSession();
   }
 
-  onDeleteCart(id: number): void {
-    this.items = this.items.filter(item => item.product.id !== id);
-    if (this.items.length === 0) {
-      sessionStorage.removeItem('cart');
-      //sessionStorage.clear(); //elimina todo incluso la sesion de usuario por eso no es recomendable
-    
-    
-    // this.calculateTotal();
-    // this.saveSession();
-    }
+  onDeleteCart(): void {
+    this.sharingData.idProductEventEmitter.subscribe(id => {
+      console.log(id + ' se ha ejecutado el evento de idProductEventEmitter');
+      this.items = this.items.filter(item => item.product.id !== id);
+      if (this.items.length === 0) {
+        sessionStorage.removeItem('cart');
+        //sessionStorage.clear(); //elimina todo incluso la sesion de usuario por eso no es recomendable
+      }
+      this.calculateTotal();
+      this.saveSession();
+
+    })
   }
 
-  // calculateTotal(): void {
-  //   this.total = this.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
-  // }
-
-  // saveSession(): void {
-  //   sessionStorage.setItem('cart', JSON.stringify(this.items));
-  // }
-
-  openCloseCart(): void {
-    this.showCart = !this.showCart;
+  calculateTotal(): void {
+    this.total = this.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
   }
+
+  saveSession(): void {
+    sessionStorage.setItem('cart', JSON.stringify(this.items));
+  }
+
 }
