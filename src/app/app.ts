@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, CartApp],
+  imports: [CommonModule, CartApp],
   templateUrl: './app.html',
 })
 export class App {

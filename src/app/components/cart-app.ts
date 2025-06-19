@@ -1,55 +1,43 @@
 import { Component, OnInit } from '@angular/core';
-import { ProductService } from '../services/product.service';
-import { Catalog } from './catalog/catalog';
 import { CartItem } from '../models/cartitem';
 import { Navbar } from './navbar/navbar';
 import { Router, RouterOutlet } from '@angular/router';
 import { SharingData } from '../services/sharing-data';
 import Swal from 'sweetalert2';
+import { Store } from '@ngrx/store';
+import { ItemsState } from '../store/items.reducer';
+import { add, remove, total } from '../store/items.action';
 
 @Component({
   selector: 'cart-app',
-  imports: [Catalog, Navbar, RouterOutlet],
+  imports: [Navbar, RouterOutlet],
   templateUrl: './cart-app.html',
 })
 export class CartApp implements OnInit {
 
   items: CartItem[] = [];
 
-  total: number = 0;
-
   constructor(
+    private store: Store<{items: ItemsState}>,
     private router: Router,
-    private sharingData: SharingData,
-    private service: ProductService) { }
+    private sharingData: SharingData) {
+      this.store.select('items').subscribe(items => {
+        this.items = items.items;
+        this.saveSession();
+      })
+     }
 
   ngOnInit(): void {
-    this.items = JSON.parse(sessionStorage.getItem('cart') || '[]');
-    this.calculateTotal();
+    this.store.dispatch(total());
     this.onDeleteCart();
     this.onAddCart();
   }
 
   onAddCart(): void {
     this.sharingData.productEventEmitter.subscribe(product => {
-      const hasItem = this.items.find(item => item.product.id === product.id);
-
-      if (hasItem) {
-        this.items = this.items.map(item => {
-          if (item.product.id === product.id) {
-            return {
-              ...item,
-              quantity: item.quantity + 1
-            }
-          }
-          return item;
-        })
-      } else {
-        this.items = [... this.items, { product: { ...product }, quantity: 1 }]
-      }
-      this.calculateTotal();
-      this.saveSession();
-      this.router.navigate(['/cart'], { state: { items: this.items, total: this.total } });
+      this.store.dispatch(add({ product: product}))
+      this.store.dispatch(total());
+      this.router.navigate(['/cart']);
 
       Swal.fire({
         title: 'Producto agregado',
@@ -74,17 +62,9 @@ export class CartApp implements OnInit {
         confirmButtonText: 'Si, Eliminar'
       }).then((result) => {
         if (result.isConfirmed) {
-          this.items = this.items.filter(item => item.product.id !== id);
-          if (this.items.length === 0) {
-            sessionStorage.removeItem('cart');
-            //sessionStorage.clear(); //elimina todo incluso la sesion de usuario por eso no es recomendable
-          }
-          this.calculateTotal();
-          this.saveSession();
-
-          this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
-          this.router.navigate(['/cart'], { state: { items: this.items, total: this.total } });
-          });
+          this.store.dispatch(remove({ id: id }));
+          this.store.dispatch(total());
+          this.router.navigate(['/cart']);
           Swal.fire({
             title: 'Eliminado',
             text: 'El producto ha sido eliminado',
@@ -95,10 +75,6 @@ export class CartApp implements OnInit {
       });
     });
   }
-
-calculateTotal(): void {
-  this.total = this.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
-}
 
 saveSession(): void {
   sessionStorage.setItem('cart', JSON.stringify(this.items));

@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { Product } from '../../models/product';
 import { ProductCard } from '../product-card/product-card';
 import { SharingData } from '../../services/sharing-data';
-import { ProductService } from '../../services/product.service';
+import { Store } from '@ngrx/store';
+import { load } from '../../store/products.actions';
 
 @Component({
   selector: 'catalog',
@@ -14,11 +15,14 @@ export class Catalog implements OnInit{
   products!: Product[];
 
   constructor(
-    private productService: ProductService,
-    private sharingData: SharingData) {}
+    private store: Store<{products: any}>,
+    private sharingData: SharingData) {
+      this.store.select('products').subscribe(state => this.products = state.products);
+      
+    }
 
   ngOnInit(): void {  
-      this.products = this.productService.findAll();  
+    this.store.dispatch(load());
   }
 
   onAddCart(product: Product) {
